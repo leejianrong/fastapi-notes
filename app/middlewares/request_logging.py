@@ -14,21 +14,34 @@ class RequestContextLogMiddleware(BaseHTTPMiddleware):
         # Use incoming header or generate a new ID
         rid = request.headers.get("x-request-id") or uuid.uuid4().hex
         token = request_id_var.set(rid)
-
         start = time.perf_counter()
+
         try:
             response: Response = await call_next(request)
-        finally:
+        except Exception:
+            # log exceptions with the same request_id
+            duration_ms = round((time.perf_counter() - start) * 1000, 2)
+            access_logger.exception(
+                "unhandled_exception",
+                extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status": 500,
+                    "duration_ms": duration_ms,
+                    "client_ip": request.client.host if request.client else None,
+                    "user_agent": request.headers.get("user-agent"),
+                    "service": "notes-api",
+                },
+            )
             # Always reset the context var to avoid leaking across requests
             request_id_var.reset(token)
+            raise
 
         # Propagate the ID back to the client
         response.headers["X-Request-ID"] = rid
 
         # Structured access log
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
-        client_ip = request.client.host if request.client else None
-        ua = request.headers.get("user-agent")
 
         # Use extra= to pass structured fields to the JSON formatter
         access_logger.info(
@@ -38,9 +51,11 @@ class RequestContextLogMiddleware(BaseHTTPMiddleware):
                 "path": request.url.path,
                 "status": response.status_code,
                 "duration_ms": duration_ms,
-                "client_ip": client_ip,
-                "user_agent": ua,
+                "client_ip": request.client.host if request.client else None,
+                "user_agent": request.headers.get("user-agent"),
                 "service": "notes-api",
             },
         )
+        # clear the request context
+        request_id_var.reset(token)
         return response
