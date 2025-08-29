@@ -12,7 +12,7 @@ class NoteBase(SQLModel):
 
 
 class Note(NoteBase, table=True):
-    __table__name = "notes"
+    __tablename__ = "notes"
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=utcnow, nullable=False)

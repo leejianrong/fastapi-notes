@@ -7,9 +7,18 @@ from app.api.health import router as health_router
 from app.api.notes import router as notes_router
 from app.db.session import engine
 
+from app.core.logging import setup_logging
+from app.middlewares.request_logging import RequestContextLogMiddleware
+
+app = FastAPI(title=settings.app_name, debug=settings.debug)
+
+# Register middleware early
+app.add_middleware(RequestContextLogMiddleware)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # JSON logging startup
+    setup_logging(level="INFO")
     # startup code to create tables if they don't exist
     SQLModel.metadata.create_all(engine)
     yield
