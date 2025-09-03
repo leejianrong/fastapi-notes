@@ -1,0 +1,11 @@
+2025/09/03 09:20:53 [emerg] 1#1: directive "error_log" is not terminated by ";" in /etc/nginx/nginx.conf:48
+2025/09/03 09:35:37 [emerg] 1#1: directive "error_log" is not terminated by ";" in /etc/nginx/nginx.conf:48
+2025/09/03 09:40:40 [emerg] 1#1: directive "error_log" is not terminated by ";" in /etc/nginx/nginx.conf:48
+2025/09/03 09:42:56 [info] 30#30: *1 client 172.19.0.1 closed keepalive connection
+2025/09/03 09:46:15 [info] 31#31: *3 client 172.19.0.1 closed keepalive connection
+2025/09/03 09:46:24 [info] 32#32: *5 client 172.19.0.1 closed keepalive connection
+2025/09/03 09:49:25 [info] 35#35: *7 client 172.19.0.1 closed keepalive connection
+2025/09/03 09:54:04 [info] 30#30: *1 client 172.19.0.1 closed keepalive connection
+2025/09/03 09:54:18 [info] 31#31: *3 client 172.19.0.1 closed keepalive connection
+2025/09/03 10:05:05 [info] 30#30: *1 client 172.19.0.1 closed keepalive connection
+2025/09/03 10:10:51 [info] 30#30: *1 client 172.19.0.1 closed keepalive connection

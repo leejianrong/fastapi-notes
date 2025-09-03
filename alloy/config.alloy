@@ -1,0 +1,50 @@
+// Discover running containers via the Docker engine
+discovery.docker "local" {
+    host = "unix:///var/run/docker.sock"
+}
+
+// Tail logs from discovered containers via the Docker API
+// This picks up stdout/stderr from containers (nginx, app, etc.).
+loki.source.docker "docker" {
+    host = "unix:///var/run/docker.sock"
+    targets = discovery.docker.local.targets
+    // Ship to our processing stage first
+    forward_to = [loki.process.docker.receiver]
+}
+
+// Optional processing: try to parse JSON log lines and keep useful fields.
+// We don't turn these into high-cardinality labels here (we'll keep them as fields).
+loki.process "docker" {
+    // try to parse common JSON fields from our app/NGINX logs
+    stage.json {
+        // These keys are parsed when present; non-JSON lines pass through unchanged
+        expressions = {
+            level = "",
+            logger = "",
+            msg = "",
+            request_id = "",
+            service = "",
+            method = "",
+            path = "",
+            status = "",
+            duration_ms = "",
+            user_agent = "",
+            client_ip = ""
+        },
+    }
+
+    // Add a static label for the compose project (adjust as needed)
+    stage.labels {
+        values = { compose_project = "fastapi-notes" }
+    }
+
+    // Forward everything to loki
+    forward_to = [loki.write.default.receiver]
+}
+
+// Where to send logs (we'll add on the Loki Service next, or point to Grafana Cloud)
+loki.write "default" {
+    endpoint {
+        url = "http://loki:3100/loki/app/v1/push
+    }
+}

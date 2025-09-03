@@ -16,6 +16,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    volumes:
+      - ./logs/app:/var/log/app
 
   nginx:
     image: nginx:1.25-alpine
@@ -26,6 +28,7 @@ services:
       - "8080:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./logs/nginx:/var/log/nginx
 
   db:
     image: postgres:16-alpine
@@ -40,6 +43,29 @@ services:
       retries: 10
     volumes:
       - pg_data:/var/lib/postgresql/data
+
+  # alloy:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.alloy
+  #   image: fastapi-notes-alloy:latest
+  #   command:
+  #     - run
+  #     - --server.http.listen-addr=0.0.0.0:12345
+  #     - --storage.path=/var/lib/alloy/data
+  #     - /etc/alloy/config.alloy
+  #   volumes:
+  #     - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+  #     #- /var/run/docker.sock:/var/run/docker.sock:ro
+  #   ports:
+  #     - "12345:12345" # Alloy UI and readiness on host:12345
+  #   healthcheck:
+  #     # Returns 200 with body 'Alloy is ready' when config is loaded
+  #     test: ["CMD-SHELL", "wget -q0- http://127.0.0.1:12345/-/ready | grep -q 'Alloy is ready'"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+  #     start_period: 5s
 
 volumes:
   app_data:

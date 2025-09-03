@@ -21,9 +21,11 @@ WORKDIR /app
 RUN useradd -m appuser
 COPY --from=deps /usr/local /usr/local
 COPY app ./app
-# create external data dir
-RUN mkdir -p /data && chown -R appuser:appuser /data /app
+
+# create a log directory and give ownership to appuser
+RUN mkdir -p /var/log/app && chown -R appuser:appuser /var/log/app /app
 USER appuser
+
 EXPOSE 8000
 # Production server: Gunicorn with Uvicorn workers
 CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "2", "-b", "0.0.0.0:8000", "app.main:app"]
