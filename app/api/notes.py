@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
@@ -7,6 +8,7 @@ from app.db.deps import get_session
 from app.db.models import Note, NoteCreate, NoteUpdate, NoteRead
 from app.services import notes as notes_service
 
+edge_log = logging.getLogger("notes.edge")
 router = APIRouter(prefix="/notes", tags=["notes"])
 
 @router.post(
@@ -44,7 +46,15 @@ def get_note(
 ):
     note = notes_service.get_note(session, note_id)
     if not note:
-        raise
+        edge_log.warning(
+            "http_404_note", 
+            extra={
+                "note_id": note_id,
+                "route": "GET /notes/{note_id}",
+                "service": "notes-api"
+            }
+        )
+        raise HTTPException(status_code=404, detail="Note not found")
     return note
 
 
@@ -60,6 +70,14 @@ def update_note(
 ):
     note = notes_service.get_note(session, note_id)
     if not note:
+        edge_log.warning(
+            "http_404_note", 
+            extra={
+                "note_id": note_id,
+                "route": "PATCH /notes/{note_id}",
+                "service": "notes-api"
+            }
+        )
         raise HTTPException(status_code=404, detail="Note not found")
     updated = notes_service.update_note(session, note, patch)
     return updated    
@@ -76,6 +94,14 @@ def delete_note(
 ):
     note = notes_service.get_note(session, note_id)
     if not note:
+        edge_log.warning(
+            "http_404_note", 
+            extra={
+                "note_id": note_id,
+                "route": "DELETE /notes/{note_id}",
+                "service": "notes-api"
+            }
+        )
         raise HTTPException(status_code=404, detail="Note not found")
     notes_service.delete_note(session, note)
     return None
