@@ -1,5 +1,6 @@
 FROM grafana/alloy:latest
-USER root
+RUN mkdir -p /var/lib/alloy/data && chown -R 473:473 /var/lib/alloy/data
+USER 473
 # Install a tiny fetch tool for healthcheck; remove package cache
 # Note Alloy image is not designed to run on Alpine Linux 
 # Debian based image: use apt-get

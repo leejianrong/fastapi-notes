@@ -1,50 +1,76 @@
-// Discover running containers via the Docker engine
-discovery.docker "local" {
-    host = "unix:///var/run/docker.sock"
+// Match the two file paths inside the Alloy container (shared volumes)
+local.file_match "nginx_access" {
+    path_targets = [{ "__path__" = "/var/log/nginx/access.jsonl" }]
 }
 
-// Tail logs from discovered containers via the Docker API
-// This picks up stdout/stderr from containers (nginx, app, etc.).
-loki.source.docker "docker" {
-    host = "unix:///var/run/docker.sock"
-    targets = discovery.docker.local.targets
-    // Ship to our processing stage first
-    forward_to = [loki.process.docker.receiver]
+local.file_match "app_logs" {
+    path_targets = [{ "__path__" = "/var/log/app/app.jsonl" }]
 }
 
-// Optional processing: try to parse JSON log lines and keep useful fields.
-// We don't turn these into high-cardinality labels here (we'll keep them as fields).
-loki.process "docker" {
-    // try to parse common JSON fields from our app/NGINX logs
+// Tail NGINX file(s)
+loki.source.file "nginx_access" {
+    targets = local.file_match.nginx_access.targets
+    forward_to = [loki.process.nginx.receiver]
+}
+
+// Tail app file(s)
+loki.source.file "app_logs" {
+    targets = local.file_match.app_logs.targets
+    forward_to = [loki.process.app.receiver]
+}
+
+// Parse JSON lines and add low-cardinality labels
+loki.process "nginx" {
+    // Maps JSON fields you care about; "" means 'use the same field name from JSON'
     stage.json {
-        // These keys are parsed when present; non-JSON lines pass through unchanged
         expressions = {
-            level = "",
-            logger = "",
-            msg = "",
-            request_id = "",
-            service = "",
-            method = "",
-            path = "",
-            status = "",
-            duration_ms = "",
-            user_agent = "",
-            client_ip = ""
-        },
+            ts = "ts",
+            status = "status",
+            method = "method",
+            path = "path",
+            request_id = "request_id",
+            host = "host",
+            service = "service",
+        }
     }
 
-    // Add a static label for the compose project (adjust as needed)
+    // Optional: static labels kept low-cardinality
     stage.labels {
-        values = { compose_project = "fastapi-notes" }
+        values = {
+            source = "nginx",
+            service = "notes-nginx",
+            compose_project = "fastapi-notes",
+        }
     }
 
-    // Forward everything to loki
     forward_to = [loki.write.default.receiver]
 }
 
-// Where to send logs (we'll add on the Loki Service next, or point to Grafana Cloud)
+loki.process "app" {
+    stage.json {
+        expressions = {
+            ts = "ts",
+            level = "level",
+            logger = "logger",
+            msg = "msg",
+            req_id = "request_id",
+        }
+    } // parse JSON fields from app logs
+
+    stage.labels {
+        values = {
+            source = "app", 
+            service = "notes-api",
+            compose_project = "fastapi-notes",
+        }
+    }
+
+    forward_to = [loki.write.default.receiver]
+}
+
+// Where to send logs (we'll add on the Loki Service next)
 loki.write "default" {
     endpoint {
-        url = "http://loki:3100/loki/app/v1/push
+        url = "http://loki:3100/loki/app/v1/push"
     }
 }
